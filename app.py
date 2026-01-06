@@ -8,166 +8,116 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression, LinearRegression, Ridge
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.cluster import KMeans
-from sklearn.metrics import (
-    accuracy_score, classification_report,
-    mean_absolute_error, mean_squared_error, r2_score
-)
+from sklearn.metrics import accuracy_score, classification_report, mean_absolute_error, mean_squared_error, r2_score
 
 from mlxtend.frequent_patterns import apriori, association_rules
 from mlxtend.preprocessing import TransactionEncoder
 
-# ---------------- CONFIG ---------------- #
-st.set_page_config(
-    page_title="InfernoData",
-    page_icon="🔥📊",
-    layout="wide"
-)
+st.set_page_config(page_title="InfernoData", layout="wide")
 
-st.title("🔥📊 InfernoData")
-st.caption("Advanced Dataset Engineering & ML Validation Platform")
+st.title("InfernoData")
+st.caption("Dataset Engineering & ML Validation")
 
-# ---------------- SIDEBAR ---------------- #
 page = st.sidebar.radio(
     "Navigate",
     [
-        "🏠 Home",
-        "🧪 Dataset Generator",
-        "✂️ Dataset Trimmer",
-        "🧠 Classification Execution",
-        "📉 Regression Execution",
-        "🧩 Clustering Execution",
-        "🔗 Association Rule Mining"
+        "Home",
+        "Dataset Generator",
+        "Dataset Trimmer",
+        "Classification",
+        "Regression",
+        "Clustering",
+        "Association Rule Mining"
     ]
 )
 
-# ---------------- UTIL ---------------- #
-def download_csv(df, name="dataset.csv"):
+def download_csv(df, name):
     csv = df.to_csv(index=False)
     b64 = base64.b64encode(csv.encode()).decode()
-    st.markdown(
-        f'<a href="data:file/csv;base64,{b64}" download="{name}">⬇️ Download CSV</a>',
-        unsafe_allow_html=True
-    )
+    st.markdown(f'<a href="data:file/csv;base64,{b64}" download="{name}">Download CSV</a>', unsafe_allow_html=True)
 
-# ---------------- HOME ---------------- #
-if page == "🏠 Home":
-    st.markdown("""
-    ## 🔥 InfernoData
-    
-    **InfernoData** is a dataset-centric ML platform that bridges the gap between  
-    **data preparation** and **model validation**.
+# ---------------- HOME ----------------
+if page == "Home":
+    st.write("InfernoData focuses on dataset preparation and ML validation.")
 
-    - Dataset Engineering First
-    - Lightweight ML Validation
-    - Classification, Regression, Clustering & Association
-    - Research & Academic Focus
-    """)
-
-# ---------------- DATASET GENERATOR ---------------- #
-elif page == "🧪 Dataset Generator":
-    st.header("🧪 Synthetic Dataset Generator")
-
+# ---------------- DATASET GENERATOR ----------------
+elif page == "Dataset Generator":
     rows = st.slider("Rows", 10, 500, 100)
     cols = st.slider("Columns", 2, 10, 4)
 
-    if st.button("🔥 Generate Dataset"):
+    if st.button("Generate"):
         data = np.random.randn(rows, cols)
         df = pd.DataFrame(data, columns=[f"Feature_{i+1}" for i in range(cols)])
         st.dataframe(df.head())
-        download_csv(df, "synthetic_dataset.csv")
+        download_csv(df, "synthetic.csv")
 
-# ---------------- TRIMMER ---------------- #
-elif page == "✂️ Dataset Trimmer":
-    st.header("✂️ Dataset Trimmer")
-
+# ---------------- DATASET TRIMMER ----------------
+elif page == "Dataset Trimmer":
     file = st.file_uploader("Upload CSV", type=["csv"])
     if file:
         df = pd.read_csv(file)
-        st.write("Original Shape:", df.shape)
-
-        cols = st.multiselect("Select Columns", df.columns)
+        cols = st.multiselect("Columns", df.columns)
         rows = st.slider("Rows", 1, len(df), min(100, len(df)))
 
-        if st.button("Trim Dataset"):
+        if st.button("Trim"):
             trimmed = df[cols].sample(rows, replace=True)
             st.dataframe(trimmed.head())
-            download_csv(trimmed, "trimmed_dataset.csv")
+            download_csv(trimmed, "trimmed.csv")
 
-# ---------------- CLASSIFICATION ---------------- #
-elif page == "🧠 Classification Execution":
-    st.header("🧠 Classification Validation")
-
-    file = st.file_uploader("Upload Classification Dataset", type=["csv"])
+# ---------------- CLASSIFICATION ----------------
+elif page == "Classification":
+    file = st.file_uploader("Upload CSV", type=["csv"])
     if file:
         df = pd.read_csv(file)
-        target = st.selectbox("Target Column", df.columns)
+        target = st.selectbox("Target", df.columns)
 
         X = df.drop(columns=[target])
         y = df[target]
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
-        model_type = st.radio("Model", ["Logistic Regression", "Decision Tree"])
+        model = LogisticRegression(max_iter=1000)
+        model.fit(X_train, y_train)
+        preds = model.predict(X_test)
 
-        if st.button("Train & Validate"):
-            model = LogisticRegression(max_iter=1000) if model_type == "Logistic Regression" else DecisionTreeClassifier()
-            model.fit(X_train, y_train)
-            preds = model.predict(X_test)
+        st.write("Accuracy:", accuracy_score(y_test, preds))
+        st.text(classification_report(y_test, preds))
 
-            st.metric("Accuracy", f"{accuracy_score(y_test, preds):.2f}")
-            st.text("Classification Report")
-            st.text(classification_report(y_test, preds))
-
-# ---------------- REGRESSION ---------------- #
-elif page == "📉 Regression Execution":
-    st.header("📉 Regression Validation")
-
-    file = st.file_uploader("Upload Regression Dataset", type=["csv"])
+# ---------------- REGRESSION ----------------
+elif page == "Regression":
+    file = st.file_uploader("Upload CSV", type=["csv"])
     if file:
         df = pd.read_csv(file)
-        target = st.selectbox("Target Column", df.columns)
+        target = st.selectbox("Target", df.columns)
 
         X = df.drop(columns=[target])
         y = df[target]
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
-        model_type = st.radio("Model", ["Linear Regression", "Ridge Regression"])
+        model = LinearRegression()
+        model.fit(X_train, y_train)
+        preds = model.predict(X_test)
 
-        if st.button("Train & Validate"):
-            model = LinearRegression() if model_type == "Linear Regression" else Ridge()
-            model.fit(X_train, y_train)
-            preds = model.predict(X_test)
+        st.write("MAE:", mean_absolute_error(y_test, preds))
+        st.write("MSE:", mean_squared_error(y_test, preds))
+        st.write("R2:", r2_score(y_test, preds))
 
-            st.metric("MAE", f"{mean_absolute_error(y_test, preds):.2f}")
-            st.metric("MSE", f"{mean_squared_error(y_test, preds):.2f}")
-            st.metric("R²", f"{r2_score(y_test, preds):.2f}")
-
-# ---------------- CLUSTERING ---------------- #
-elif page == "🧩 Clustering Execution":
-    st.header("🧩 Clustering Validation")
-
-    file = st.file_uploader("Upload Numeric Dataset", type=["csv"])
+# ---------------- CLUSTERING ----------------
+elif page == "Clustering":
+    file = st.file_uploader("Upload CSV", type=["csv"])
     if file:
         df = pd.read_csv(file)
         k = st.slider("Clusters", 2, 10, 3)
 
-        if st.button("Run KMeans"):
-            model = KMeans(n_clusters=k, random_state=42)
-            df["Cluster"] = model.fit_predict(df)
+        model = KMeans(n_clusters=k, random_state=42)
+        df["Cluster"] = model.fit_predict(df)
 
-            st.dataframe(df.head())
+        st.dataframe(df.head())
 
-            fig, ax = plt.subplots()
-            ax.scatter(df.iloc[:, 0], df.iloc[:, 1], c=df["Cluster"])
-            ax.set_title("Cluster Visualization")
-            st.pyplot(fig)
-
-# ---------------- ASSOCIATION RULE MINING (FIXED) ---------------- #
-elif page == "🔗 Association Rule Mining":
-    st.header("🔗 Association Rule Mining")
-
-    file = st.file_uploader("Upload Transaction Dataset (CSV)", type=["csv"])
+# ---------------- ASSOCIATION RULE MINING ----------------
+elif page == "Association Rule Mining":
+    file = st.file_uploader("Upload Transaction CSV", type=["csv"])
     if file:
         df = pd.read_csv(file)
 
@@ -175,37 +125,19 @@ elif page == "🔗 Association Rule Mining":
         confidence = st.slider("Min Confidence", 0.1, 1.0, 0.5)
 
         if st.button("Generate Rules"):
-            # Convert transactions to list
-            transactions = (
-                df.iloc[:, 0]
-                .dropna()
-                .astype(str)
-                .apply(lambda x: x.split(","))
-                .tolist()
-            )
+            transactions = df.iloc[:, 0].dropna().astype(str).apply(lambda x: x.split(",")).tolist()
 
-            # One-hot encoding
             te = TransactionEncoder()
             te_array = te.fit(transactions).transform(transactions)
-            df_binary = pd.DataFrame(te_array, columns=te.columns_)
+            df_bin = pd.DataFrame(te_array, columns=te.columns_)
 
-            st.subheader("Binary Transaction Matrix")
-            st.dataframe(df_binary.head())
-
-            # Apriori
-            freq = apriori(df_binary, min_support=support, use_colnames=True)
+            freq = apriori(df_bin, min_support=support, use_colnames=True)
 
             if freq.empty:
-                st.warning("No frequent itemsets found. Reduce support.")
+                st.warning("No frequent itemsets.")
             else:
                 rules = association_rules(freq, metric="confidence", min_threshold=confidence)
+                st.dataframe(rules[["antecedents", "consequents", "support", "confidence", "lift"]])
+                download_csv(rules, "association_rules.csv")
 
-                if rules.empty:
-                    st.warning("No rules found. Reduce confidence.")
-                else:
-                    st.success("Association Rules Generated")
-                    st.dataframe(
-                        rules[["antecedents", "consequents", "support", "confidence", "lift"]]
-                    )
-                    download_csv(rules, "association_rules.csv")
 
