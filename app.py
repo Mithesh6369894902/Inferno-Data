@@ -14,15 +14,16 @@ from sklearn.metrics import (
 )
 
 from mlxtend.frequent_patterns import apriori, association_rules
+from mlxtend.preprocessing import TransactionEncoder
 
 # ---------------- CONFIG ---------------- #
 st.set_page_config(
     page_title="InfernoData",
-    page_icon="🔥",
+    page_icon="🔥📊",
     layout="wide"
 )
 
-st.title("🔥 InfernoData")
+st.title("🔥📊 InfernoData")
 st.caption("Advanced Dataset Engineering & ML Validation Platform")
 
 # ---------------- SIDEBAR ---------------- #
@@ -56,13 +57,10 @@ if page == "🏠 Home":
     **InfernoData** is a dataset-centric ML platform that bridges the gap between  
     **data preparation** and **model validation**.
 
-    ### What makes it different?
-    - Focus on **dataset engineering**
-    - Lightweight ML execution for **validation**
-    - Supports **Classification, Regression, Clustering & Association**
-    - Designed for **research & academic projects**
-
-    > *Data comes first. Models come second.*
+    - Dataset Engineering First
+    - Lightweight ML Validation
+    - Classification, Regression, Clustering & Association
+    - Research & Academic Focus
     """)
 
 # ---------------- DATASET GENERATOR ---------------- #
@@ -165,11 +163,11 @@ elif page == "🧩 Clustering Execution":
             ax.set_title("Cluster Visualization")
             st.pyplot(fig)
 
-# ---------------- ASSOCIATION ---------------- #
+# ---------------- ASSOCIATION RULE MINING (FIXED) ---------------- #
 elif page == "🔗 Association Rule Mining":
     st.header("🔗 Association Rule Mining")
 
-    file = st.file_uploader("Upload Transaction Dataset (Binary)", type=["csv"])
+    file = st.file_uploader("Upload Transaction Dataset (CSV)", type=["csv"])
     if file:
         df = pd.read_csv(file)
 
@@ -177,7 +175,37 @@ elif page == "🔗 Association Rule Mining":
         confidence = st.slider("Min Confidence", 0.1, 1.0, 0.5)
 
         if st.button("Generate Rules"):
-            freq = apriori(df, min_support=support, use_colnames=True)
-            rules = association_rules(freq, metric="confidence", min_threshold=confidence)
+            # Convert transactions to list
+            transactions = (
+                df.iloc[:, 0]
+                .dropna()
+                .astype(str)
+                .apply(lambda x: x.split(","))
+                .tolist()
+            )
 
-            st.dataframe(rules[["antecedents", "consequents", "support", "confidence", "lift"]])
+            # One-hot encoding
+            te = TransactionEncoder()
+            te_array = te.fit(transactions).transform(transactions)
+            df_binary = pd.DataFrame(te_array, columns=te.columns_)
+
+            st.subheader("Binary Transaction Matrix")
+            st.dataframe(df_binary.head())
+
+            # Apriori
+            freq = apriori(df_binary, min_support=support, use_colnames=True)
+
+            if freq.empty:
+                st.warning("No frequent itemsets found. Reduce support.")
+            else:
+                rules = association_rules(freq, metric="confidence", min_threshold=confidence)
+
+                if rules.empty:
+                    st.warning("No rules found. Reduce confidence.")
+                else:
+                    st.success("Association Rules Generated")
+                    st.dataframe(
+                        rules[["antecedents", "consequents", "support", "confidence", "lift"]]
+                    )
+                    download_csv(rules, "association_rules.csv")
+
